@@ -1,0 +1,86 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>GSA — Cart</title>
+  <link rel="stylesheet" href="style.css"/>
+  <script src="app.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand">
+        <div class="logo">IMS</div>
+        <div><div style="font-weight:700">Cart</div><div class="small">Deliver or remove items</div></div>
+      </div>
+      <div class="nav">
+        <a class="link" href="index.html">Home</a>
+        <a class="link" href="stock.html">Stock</a>
+        <a class="link" href="dashboard.html">Dashboard</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Your cart</h3>
+      <table class="table" id="tblCart">
+        <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Subtotal</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+        <div class="small" id="totalTxt"></div>
+        <div style="display:flex;gap:8px">
+          <button id="btnClear" class="btn ghost">Clear cart</button>
+          <button id="btnDeliver" class="btn">Deliver (Checkout)</button>
+        </div>
+      </div>
+      <div id="msg" class="small" style="margin-top:8px;color:var(--danger)"></div>
+    </div>
+
+    <div class="footer">Cart • GSA</div>
+  </div>
+
+<script>
+const tbody = document.querySelector('#tblCart tbody');
+const totalTxt = document.getElementById('totalTxt');
+const msg = document.getElementById('msg');
+
+function render(){
+  const cart = IMS.getCart();
+  tbody.innerHTML = '';
+  let total = 0;
+  cart.forEach(c => {
+    const subtotal = c.qty * c.price;
+    total += subtotal;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${c.name}</td><td>${c.qty}</td><td>₹ ${c.price}</td><td>₹ ${subtotal}</td>
+      <td><button class="btn ghost" data-id="${c.itemId}" data-action="remove">Remove</button></td>`;
+    tbody.appendChild(tr);
+  });
+  totalTxt.innerText = `Total: ₹ ${total}`;
+}
+tbody.addEventListener('click', e=>{
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  if(btn.dataset.action==='remove'){
+    IMS.removeFromCart(btn.dataset.id);
+    render();
+  }
+});
+
+document.getElementById('btnClear').addEventListener('click', ()=>{
+  if(confirm('Clear cart?')){ localStorage.setItem('ims_cart', JSON.stringify([])); render(); }
+});
+
+document.getElementById('btnDeliver').addEventListener('click', ()=>{
+  const res = IMS.deliverCart();
+  if(!res.ok){ msg.innerText = res.msg; setTimeout(()=>msg.innerText='',3000); return; }
+  alert('Delivered successfully — stock updated.');
+  render();
+});
+
+// initial
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>GSA — Stock</title>
+  <link rel="stylesheet" href="style.css"/>
+  <script src="app.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand">
+        <div class="logo">IMS</div>
+        <div><div style="font-weight:700">Stock</div><div class="small">Manage inventory</div></div>
+      </div>
+      <div class="nav">
+        <a class="link" href="index.html">Home</a>
+        <a class="link" href="dashboard.html">Dashboard</a>
+        <a class="link" href="cart.html">Cart</a>
+      </div>
+    </div>
+
+    <div class="grid" style="grid-template-columns: 420px 1fr; gap:12px">
+      <div class="card">
+        <h3>Add new item</h3>
+        <div class="form">
+          <input id="name" placeholder="Item name" />
+          <input id="sku" placeholder="SKU (e.g. ITM-001)" />
+          <input id="qty" placeholder="Quantity" type="number" />
+          <input id="price" placeholder="Price (₹)" type="number" />
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="btnAdd" class="btn">Add Item</button>
+            <button id="btnReset" class="btn ghost">Reset</button>
+          </div>
+          <div id="msg" class="small" style="margin-top:8px;color:var(--danger)"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Stock list</h3>
+        <input id="search" class="search" placeholder="Search by name or SKU" />
+        <table class="table" id="tbl">
+          <thead><tr><th>Name</th><th>SKU</th><th>Qty</th><th>Price</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="footer">Manage stock • InventoryMS</div>
+  </div>
+
+<script>
+const nameI = document.getElementById('name');
+const skuI = document.getElementById('sku');
+const qtyI = document.getElementById('qty');
+const priceI = document.getElementById('price');
+const msg = document.getElementById('msg');
+
+function clearForm(){ nameI.value=''; skuI.value=''; qtyI.value=''; priceI.value=''; msg.innerText=''; }
+
+document.getElementById('btnAdd').addEventListener('click', ()=>{
+  const name = nameI.value.trim(), sku = skuI.value.trim();
+  const qty = parseInt(qtyI.value||0,10), price = parseFloat(priceI.value||0);
+  if(!name || !sku || qty<=0 || price<=0){ msg.innerText='Please enter valid values'; return; }
+  IMS.addItem({name, sku, qty, price});
+  clearForm();
+  render();
+});
+
+document.getElementById('btnReset').addEventListener('click', clearForm);
+
+function render(){
+  const filter = document.getElementById('search').value.trim().toLowerCase();
+  const items = IMS.getItems().filter(it => (it.name+it.sku).toLowerCase().includes(filter));
+  const tbody = document.querySelector('#tbl tbody'); tbody.innerHTML='';
+  items.forEach(it=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${it.name}</td>
+      <td class="small">${it.sku}</td>
+      <td>${it.qty}</td>
+      <td>₹ ${it.price}</td>
+      <td style="min-width:170px">
+        <div style="display:flex;gap:8px">
+          <button class="btn ghost" data-action="add" data-id="${it.id}">Add to cart</button>
+          <button class="btn ghost" data-action="edit" data-id="${it.id}">Edit</button>
+          <button class="btn" style="background:var(--danger)" data-action="del" data-id="${it.id}">Delete</button>
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+document.querySelector('#tbl tbody').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  const id = btn.dataset.id, action = btn.dataset.action;
+  if(action==='add'){
+    const q = parseInt(prompt('Quantity to add to cart?', '1')||'1',10);
+    if(isNaN(q)||q<=0){ alert('Invalid qty'); return; }
+    const res = IMS.addToCart(id,q);
+    if(!res.ok) alert(res.msg); else { alert('Added to cart'); render(); }
+  } else if(action==='edit'){
+    const items = IMS.getItems(); const it = items.find(x=>x.id===id);
+    const newName = prompt('Name', it.name);
+    const newSku = prompt('SKU', it.sku);
+    const newQty = prompt('Qty', it.qty);
+    const newPrice = prompt('Price', it.price);
+    if(newName==null) return;
+    IMS.updateItem(id,{name:newName, sku:newSku, qty:parseInt(newQty||it.qty,10), price:parseFloat(newPrice||it.price)});
+    render();
+  } else if(action==='del'){
+    if(confirm('Delete this item forever?')){ IMS.deleteItem(id); render(); }
+  }
+});
+
+document.getElementById('search').addEventListener('input', render);
+
+// initial
+render();
+</script>
+</body>
+</html>
